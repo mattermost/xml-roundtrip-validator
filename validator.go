@@ -38,7 +38,7 @@ func (err XMLValidationError) Unwrap() error {
 // Validate makes sure the given XML bytes survive round trips through encoding/xml without mutations
 func Validate(xmlReader io.Reader) error {
 	xmlBuffer := &bytes.Buffer{}
-	xmlReader = io.TeeReader(xmlReader, xmlBuffer)
+	xmlReader = &byteReader{io.TeeReader(xmlReader, xmlBuffer)}
 	decoder := xml.NewDecoder(xmlReader)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
 	offset := int64(0)
@@ -68,37 +68,65 @@ func Validate(xmlReader io.Reader) error {
 
 // ValidateAll is like Validate, but instead of returning after the first error,
 // it accumulates errors and validates the entire document
-func ValidateAll(xmlBytes []byte) []error {
+func ValidateAll(xmlReader io.Reader) []error {
+	xmlBuffer := &bytes.Buffer{}
+	xmlReader = io.TeeReader(xmlReader, xmlBuffer)
 	errs := []error{}
-	for len(xmlBytes) > 0 {
-		err := Validate(bytes.NewReader(xmlBytes))
+	offset := int64(0)
+	line := int64(1)
+	column := int64(1)
+	for {
+		err := Validate(xmlReader)
 		if err == nil {
 			// reached the end with no additional errors
 			break
 		}
-		errs = append(errs, err)
 		validationError := XMLValidationError{}
-		if !errors.As(err, &validationError) {
+		if errors.As(err, &validationError) {
+			// validation errors contain line numbers and offsets, but
+			// these offsets are based on the offset where Validate
+			// was called, so they need to be adjusted to accordingly
+			validationError.Start += offset
+			validationError.End += offset
+			if validationError.Line == 1 {
+				validationError.Column += column - 1
+			}
+			validationError.Line += line - 1
+			errs = append(errs, validationError)
+			xmlBytes := xmlBuffer.Bytes()
+			offset += int64(len(xmlBytes))
+			newLines := int64(bytes.Count(xmlBytes, []byte("\n")))
+			line += newLines
+			if newLines > 0 {
+				column = int64(len(xmlBytes) - bytes.LastIndex(xmlBytes, []byte("\n")))
+			} else {
+				column += int64(len(xmlBytes))
+			}
+			xmlBuffer.Reset()
+		} else {
 			// this was not a validation error, but likely
 			// completely unparseable XML instead; no point
 			// in trying to continue
+			errs = append(errs, err)
 			break
 		}
-		// blank out the start of the byte array up until the
-		// first error, while preserving line breaks
-		newBytes := make([]byte, len(xmlBytes))
-		for i := range xmlBytes {
-			if int64(i) >= validationError.End {
-				newBytes[i] = xmlBytes[i]
-			} else if xmlBytes[i] == '\n' {
-				newBytes[i] = '\n'
-			} else {
-				newBytes[i] = ' '
-			}
-		}
-		xmlBytes = newBytes
 	}
 	return errs
+}
+
+// bufio implements a ByteReader but we explicitly don't want any buffering
+type byteReader struct {
+	r io.Reader
+}
+
+func (r *byteReader) ReadByte() (byte, error) {
+	p := make([]byte, 1)
+	_, err := r.r.Read(p)
+	return p[0], err
+}
+
+func (r *byteReader) Read(p []byte) (int, error) {
+	return r.r.Read(p)
 }
 
 // CheckToken computes a round trip for a given xml.Token and returns an

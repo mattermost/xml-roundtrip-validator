@@ -144,7 +144,7 @@ func TestUnparseableXML(t *testing.T) {
 	require.Error(t, err, "Should error on unexpected ']]>' sequence")
 	require.IsType(t, &xml.SyntaxError{}, err, "Error should be an &xml.SyntaxError")
 
-	errs := ValidateAll([]byte(
+	errs := ValidateAll(bytes.NewBufferString(
 		`<Root ::attr="x">]]><x::Element/></Root>`))
 	require.Len(t, errs, 2, "Should return exactly two errors")
 	require.Error(t, errs[0], "Should error on bad attribute")
@@ -156,7 +156,7 @@ func TestValidateAll(t *testing.T) {
 	var err XMLValidationError
 
 	xmlBytes := []byte("<Root>\r\n    <! <<!-- -->!-- x --> y>\r\n    <Element ::attr=\"foo\"></x::Element>\r\n</Root>")
-	errs := ValidateAll(xmlBytes)
+	errs := ValidateAll(bytes.NewBuffer(xmlBytes))
 	require.Equal(t, 3, len(errs), "Should return three errors")
 
 	err = errs[0].(XMLValidationError)
