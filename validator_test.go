@@ -37,29 +37,29 @@ func TestColonsInLocalNames(t *testing.T) {
 	err = Validate([]byte(`<x::Root/>`))
 	require.Error(t, err, "Should error on input with colons in the root element's name")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<x::Root/>`),
-		Observed: tokenize(`<Root xmlns="x"/>`),
+		Expected: tokenize(t, `<x::Root/>`),
+		Observed: tokenize(t, `<Root xmlns="x"/>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	err = Validate([]byte(`<Root><x::Element></::Element></Root>`))
 	require.Error(t, err, "Should error on input with colons in a nested tag's name")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<x::Element>`),
-		Observed: tokenize(`<Element xmlns="x">`),
+		Expected: tokenize(t, `<x::Element>`),
+		Observed: tokenize(t, `<Element xmlns="x">`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	err = Validate([]byte(`<Root><Element ::attr="foo"></Element></Root>`))
 	require.Error(t, err, "Should error on input with colons in an attribute's name")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<Element ::attr="foo">`),
-		Observed: tokenize(`<Element attr="foo">`),
+		Expected: tokenize(t, `<Element ::attr="foo">`),
+		Observed: tokenize(t, `<Element attr="foo">`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	err = Validate([]byte(`<Root></x::Element></Root>`))
 	require.Error(t, err, "Should error on input with colons in an end tag's name")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`</x::Element>`),
-		Observed: tokenize(`</Element>`),
+		Expected: tokenize(t, `</x::Element>`),
+		Observed: tokenize(t, `</Element>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 }
 
@@ -79,22 +79,22 @@ func TestEmptyAttributes(t *testing.T) {
 	err = Validate([]byte(`<Root :="value"/>`))
 	require.Error(t, err, "Should error on input with empty attribute names")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<Root :="value"/>`),
-		Observed: tokenize(`<Root/>`),
+		Expected: tokenize(t, `<Root :="value"/>`),
+		Observed: tokenize(t, `<Root/>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	err = Validate([]byte(`<Root x:="value"/>`))
 	require.Error(t, err, "Should error on input with empty attribute local names")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<Root x:="value"/>`),
-		Observed: tokenize(`<Root/>`),
+		Expected: tokenize(t, `<Root x:="value"/>`),
+		Observed: tokenize(t, `<Root/>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	err = Validate([]byte(`<Root xmlns="x" xmlns:="y"></Root>`))
 	require.Error(t, err, "Should error on input with empty xmlns local names")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<Root xmlns="x" xmlns:="y">`),
-		Observed: tokenize(`<Root xmlns="x">`),
+		Expected: tokenize(t, `<Root xmlns="x" xmlns:="y">`),
+		Observed: tokenize(t, `<Root xmlns="x">`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	validXmlns := `<Root xmlns="http://example.com/"/>`
@@ -116,8 +116,8 @@ func TestDirectives(t *testing.T) {
 	err = Validate([]byte(`<Root><! <<!-- -->!-- x --> y></Root>`))
 	require.Error(t, err, "Should error on bad directive")
 	require.Equal(t, XMLRoundtripError{
-		Expected: tokenize(`<! <<!-- -->!-- x --> y>`),
-		Observed: tokenize(`<!  y>`),
+		Expected: tokenize(t, `<! <<!-- -->!-- x --> y>`),
+		Observed: tokenize(t, `<!  y>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	goodDirectives := []string{
@@ -176,12 +176,12 @@ func TestValidateAll(t *testing.T) {
 
 func TestTokenEquals(t *testing.T) {
 	tokens := []xml.Token{
-		tokenize(`token`),
-		tokenize(`<!--token-->`),
-		tokenize(`<!token>`),
-		tokenize(`</token>`),
-		tokenize(`<?token?>`),
-		tokenize(`<token>`),
+		tokenize(t, `token`),
+		tokenize(t, `<!--token-->`),
+		tokenize(t, `<!token>`),
+		tokenize(t, `</token>`),
+		tokenize(t, `<?token?>`),
+		tokenize(t, `<token>`),
 	}
 
 	for i, token1 := range tokens {
@@ -204,16 +204,17 @@ func TestErrorMessages(t *testing.T) {
 		"Validation error message should match expectation")
 
 	require.Equal(t, "roundtrip error: expected {{ Foo} []}, observed {{ Bar} []}",
-		XMLRoundtripError{tokenize(`<Foo>`), tokenize(`<Bar>`), nil}.Error(),
+		XMLRoundtripError{tokenize(t, `<Foo>`), tokenize(t, `<Bar>`), nil}.Error(),
 		"Roundtrip error message with mismatching tokens should match expectation")
 
 	require.Equal(t, "roundtrip error: unexpected overflow after token: bar",
-		XMLRoundtripError{tokenize(`<Foo>`), tokenize(`<Foo>`), []byte(`bar`)}.Error(),
+		XMLRoundtripError{tokenize(t, `<Foo>`), tokenize(t, `<Foo>`), []byte(`bar`)}.Error(),
 		"Roundtrip error message with overflow should match expectation")
 }
 
-func tokenize(s string) xml.Token {
+func tokenize(t *testing.T, s string) xml.Token {
 	decoder := xml.NewDecoder(strings.NewReader(s))
-	token, _ := decoder.RawToken()
+	token, err := decoder.RawToken()
+	require.NoError(t, err, "Tokenization should succeed")
 	return token
 }
