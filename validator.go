@@ -36,8 +36,10 @@ func (err XMLValidationError) Unwrap() error {
 }
 
 // Validate makes sure the given XML bytes survive round trips through encoding/xml without mutations
-func Validate(xmlBytes []byte) error {
-	decoder := xml.NewDecoder(bytes.NewReader(xmlBytes))
+func Validate(xmlReader io.Reader) error {
+	xmlBuffer := &bytes.Buffer{}
+	xmlReader = io.TeeReader(xmlReader, xmlBuffer)
+	decoder := xml.NewDecoder(xmlReader)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
 	offset := int64(0)
 	for {
@@ -48,6 +50,7 @@ func Validate(xmlBytes []byte) error {
 			return err
 		}
 		if err := CheckToken(token); err != nil {
+			xmlBytes := xmlBuffer.Bytes()
 			line := bytes.Count(xmlBytes[0:offset], []byte{'\n'}) + 1
 			lineStart := int64(bytes.LastIndexByte(xmlBytes[0:offset], '\n')) + 1
 			column := offset - lineStart + 1
@@ -68,7 +71,7 @@ func Validate(xmlBytes []byte) error {
 func ValidateAll(xmlBytes []byte) []error {
 	errs := []error{}
 	for len(xmlBytes) > 0 {
-		err := Validate(xmlBytes)
+		err := Validate(bytes.NewReader(xmlBytes))
 		if err == nil {
 			// reached the end with no additional errors
 			break
