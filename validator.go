@@ -223,11 +223,9 @@ func fixNamespacePrefixes(before, after *xml.StartElement) {
 
 		// handle attribute prefixes; the xmlns attribute always comes immediately before the prefixed attribute
 		for len(after.Attr) > len(before.Attr) && len(after.Attr) > 1 {
-			var (
-				xmlns *xml.Attr
-				i     int
-			)
-			for i = 1; i < len(after.Attr); i++ {
+			var xmlns *xml.Attr
+			i := 1
+			for ; i < len(after.Attr); i++ {
 				if after.Attr[i-1].Name.Space == "xmlns" && after.Attr[i-1].Name.Local == after.Attr[i].Name.Space {
 					xmlns = &after.Attr[i-1]
 					break
