@@ -3,6 +3,7 @@ package validator
 import (
 	"bytes"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 )
@@ -73,8 +74,8 @@ func ValidateAll(xmlBytes []byte) []error {
 			break
 		}
 		errs = append(errs, err)
-		validationError, ok := err.(XMLValidationError)
-		if !ok {
+		validationError := XMLValidationError{}
+		if !errors.As(err, &validationError) {
 			// this was not a validation error, but likely
 			// completely unparseable XML instead; no point
 			// in trying to continue
