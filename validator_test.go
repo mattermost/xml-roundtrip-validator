@@ -1,6 +1,7 @@
 package validator
 
 import (
+	"bytes"
 	"encoding/xml"
 	"errors"
 	"fmt"
@@ -27,35 +28,35 @@ func TestValidXML(t *testing.T) {
 	}
 
 	for _, doc := range docs {
-		require.NoError(t, Validate([]byte(doc)), "Should pass on valid XML documents")
+		require.NoError(t, Validate(bytes.NewBufferString(doc)), "Should pass on valid XML documents")
 	}
 }
 
 func TestColonsInLocalNames(t *testing.T) {
 	var err error
 
-	err = Validate([]byte(`<x::Root/>`))
+	err = Validate(bytes.NewBufferString(`<x::Root/>`))
 	require.Error(t, err, "Should error on input with colons in the root element's name")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<x::Root/>`),
 		Observed: tokenize(t, `<Root xmlns="x"/>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
-	err = Validate([]byte(`<Root><x::Element></::Element></Root>`))
+	err = Validate(bytes.NewBufferString(`<Root><x::Element></::Element></Root>`))
 	require.Error(t, err, "Should error on input with colons in a nested tag's name")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<x::Element>`),
 		Observed: tokenize(t, `<Element xmlns="x">`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
-	err = Validate([]byte(`<Root><Element ::attr="foo"></Element></Root>`))
+	err = Validate(bytes.NewBufferString(`<Root><Element ::attr="foo"></Element></Root>`))
 	require.Error(t, err, "Should error on input with colons in an attribute's name")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<Element ::attr="foo">`),
 		Observed: tokenize(t, `<Element attr="foo">`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
-	err = Validate([]byte(`<Root></x::Element></Root>`))
+	err = Validate(bytes.NewBufferString(`<Root></x::Element></Root>`))
 	require.Error(t, err, "Should error on input with colons in an end tag's name")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `</x::Element>`),
@@ -66,31 +67,31 @@ func TestColonsInLocalNames(t *testing.T) {
 func TestEmptyNames(t *testing.T) {
 	var err error
 
-	err = Validate([]byte(`<x:>`))
+	err = Validate(bytes.NewBufferString(`<x:>`))
 	require.Error(t, err, "Should error on start element with no local name")
 
-	err = Validate([]byte(`</x:>`))
+	err = Validate(bytes.NewBufferString(`</x:>`))
 	require.Error(t, err, "Should error on end element with no local name")
 }
 
 func TestEmptyAttributes(t *testing.T) {
 	var err error
 
-	err = Validate([]byte(`<Root :="value"/>`))
+	err = Validate(bytes.NewBufferString(`<Root :="value"/>`))
 	require.Error(t, err, "Should error on input with empty attribute names")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<Root :="value"/>`),
 		Observed: tokenize(t, `<Root/>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
-	err = Validate([]byte(`<Root x:="value"/>`))
+	err = Validate(bytes.NewBufferString(`<Root x:="value"/>`))
 	require.Error(t, err, "Should error on input with empty attribute local names")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<Root x:="value"/>`),
 		Observed: tokenize(t, `<Root/>`),
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
-	err = Validate([]byte(`<Root xmlns="x" xmlns:="y"></Root>`))
+	err = Validate(bytes.NewBufferString(`<Root xmlns="x" xmlns:="y"></Root>`))
 	require.Error(t, err, "Should error on input with empty xmlns local names")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<Root xmlns="x" xmlns:="y">`),
@@ -98,13 +99,13 @@ func TestEmptyAttributes(t *testing.T) {
 	}, errors.Unwrap(err), "Error should contain expected token and mutation")
 
 	validXmlns := `<Root xmlns="http://example.com/"/>`
-	require.NoError(t, Validate([]byte(validXmlns)), "Should pass on input with valid xmlns attributes")
+	require.NoError(t, Validate(bytes.NewBufferString(validXmlns)), "Should pass on input with valid xmlns attributes")
 }
 
 func TestDirectives(t *testing.T) {
 	var err error
 
-	err = Validate([]byte(
+	err = Validate(bytes.NewBufferString(
 		`<Root>
 			<! <<!-- -->!-->"--> " >
 			<! ">" <X/>>
@@ -113,7 +114,7 @@ func TestDirectives(t *testing.T) {
 	require.Equal(t, &xml.SyntaxError{Msg: io.ErrUnexpectedEOF.Error(), Line: 1},
 		errors.Unwrap(err), "Round trip should fail with unexpected EOF")
 
-	err = Validate([]byte(`<Root><! <<!-- -->!-- x --> y></Root>`))
+	err = Validate(bytes.NewBufferString(`<Root><! <<!-- -->!-- x --> y></Root>`))
 	require.Error(t, err, "Should error on bad directive")
 	require.Equal(t, XMLRoundtripError{
 		Expected: tokenize(t, `<! <<!-- -->!-- x --> y>`),
@@ -126,19 +127,19 @@ func TestDirectives(t *testing.T) {
 		`<!name <!-- comment --><nesting <more nesting>>>`,
 	}
 	for _, doc := range goodDirectives {
-		require.NoError(t, Validate([]byte(doc)), "Should pass on good directives")
+		require.NoError(t, Validate(bytes.NewBufferString(doc)), "Should pass on good directives")
 	}
 }
 
 func TestUnparseableXML(t *testing.T) {
 	var err error
 
-	err = Validate([]byte(
+	err = Validate(bytes.NewBufferString(
 		`<Root><!--`))
 	require.Error(t, err, "Should error on unclosed comment")
 	require.IsType(t, &xml.SyntaxError{}, err, "Error should be an &xml.SyntaxError")
 
-	err = Validate([]byte(
+	err = Validate(bytes.NewBufferString(
 		`<Root>]]></Root>`))
 	require.Error(t, err, "Should error on unexpected ']]>' sequence")
 	require.IsType(t, &xml.SyntaxError{}, err, "Error should be an &xml.SyntaxError")
