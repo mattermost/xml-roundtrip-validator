@@ -42,8 +42,6 @@ func Validate(xmlReader io.Reader) error {
 	decoder := xml.NewDecoder(xmlReader)
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
 	offset := int64(0)
-	encodingBuffer := &bytes.Buffer{}
-	encoder := xml.NewEncoder(encodingBuffer)
 	for {
 		token, err := decoder.RawToken()
 		if err == io.EOF {
@@ -51,7 +49,7 @@ func Validate(xmlReader io.Reader) error {
 		} else if err != nil {
 			return err
 		}
-		if err := checkToken(token, encoder, encodingBuffer); err != nil {
+		if err := CheckToken(token); err != nil {
 			xmlBytes := xmlBuffer.Bytes()
 			line := bytes.Count(xmlBytes[0:offset], []byte{'\n'}) + 1
 			lineStart := int64(bytes.LastIndexByte(xmlBytes[0:offset], '\n')) + 1
@@ -64,7 +62,6 @@ func Validate(xmlReader io.Reader) error {
 				err:    err,
 			}
 		}
-		encodingBuffer.Reset()
 		offset = decoder.InputOffset()
 	}
 }
@@ -137,11 +134,7 @@ func (r *byteReader) Read(p []byte) (int, error) {
 func CheckToken(before xml.Token) error {
 	buffer := &bytes.Buffer{}
 	encoder := xml.NewEncoder(buffer)
-	return checkToken(before, encoder, buffer)
-}
 
-// checkToken is like CheckToken, but allows reusing encoders and buffers
-func checkToken(before xml.Token, encoder *xml.Encoder, buffer *bytes.Buffer) error {
 	switch t := before.(type) {
 	case xml.EndElement:
 		// xml.Encoder expects matching StartElements for all EndElements
