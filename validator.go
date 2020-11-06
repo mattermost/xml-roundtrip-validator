@@ -40,6 +40,7 @@ func Validate(xmlReader io.Reader) error {
 	xmlBuffer := &bytes.Buffer{}
 	xmlReader = &byteReader{io.TeeReader(xmlReader, xmlBuffer)}
 	decoder := xml.NewDecoder(xmlReader)
+	decoder.Strict = false
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
 	offset := int64(0)
 	for {
