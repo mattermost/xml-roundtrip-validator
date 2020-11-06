@@ -24,6 +24,7 @@ func TestValidXML(t *testing.T) {
 		`<Root><![CDATA[text "hello"]]></Root>`,
 		`<!-- comment --><Root/>`,
 		`<Root xmlns="http://example.com/1" x:attr="y"/>`,
+		`<x:Root xmlns="http://example.com/1" x:attr="y" x:attr2="z"/>`,
 		`<x:Root xmlns:x="http://example.com/"><Element xmlns:x="http://example.com/"/></x:Root>`,
 	}
 
