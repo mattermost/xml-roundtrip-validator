@@ -34,7 +34,7 @@ import (
 )
 
 func DoStuffWithXML(input string) {
-    if errs := xrv.ValidateAll(strings.NewReader(input)); errs != nil {
+    if errs := xrv.ValidateAll(strings.NewReader(input)); len(errs) != 0 {
         for err := range errs {
             // here you can log each error individually if you like
         }
