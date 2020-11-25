@@ -2,8 +2,6 @@
 
 The Go module `github.com/mattermost/xml-roundtrip-validator` implements mitigations for multiple security issues in Go's `encoding/xml`. Applications that use `encoding/xml` for security-critical operations, such as XML signature validation and SAML, may use the `Validate` and `ValidateAll` functions to avoid impact from malicious XML inputs.
 
-Additionally, `
-
 ## Usage
 
 ### Validate
