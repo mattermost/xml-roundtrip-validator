@@ -3,7 +3,7 @@
 <table>
   <tr><td>Affected component</td><td>Package <code>encoding/xml</code> in Go</td></tr>
   <tr><td>Affected versions</td><td>All</td></tr>
-  <tr><td>CVE-ID</td><td>TBD</td></tr>
+  <tr><td>CVE-ID</td><td>CVE-2020-29509</td></tr>
   <tr><td>Weakness</td><td>CWE-115: Misinterpretation of Input</td></tr>
   <tr><td>CVSS rating</td><td>9.8 (CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)</td></tr>
 </table>
