@@ -38,7 +38,7 @@ func (err XMLValidationError) Unwrap() error {
 // Validate makes sure the given XML bytes survive round trips through encoding/xml without mutations
 func Validate(xmlReader io.Reader) error {
 	xmlBuffer := &bytes.Buffer{}
-	xmlReader = &byteReader{io.TeeReader(xmlReader, xmlBuffer)}
+	xmlReader = &byteReader{r: io.TeeReader(xmlReader, xmlBuffer)}
 	decoder := xml.NewDecoder(xmlReader)
 	decoder.Strict = false
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
@@ -117,16 +117,31 @@ func ValidateAll(xmlReader io.Reader) []error {
 
 // bufio implements a ByteReader but we explicitly don't want any buffering
 type byteReader struct {
-	r io.Reader
+	r   io.Reader
+	err error
 }
 
 func (r *byteReader) ReadByte() (byte, error) {
-	p := make([]byte, 1)
-	_, err := r.r.Read(p)
-	return p[0], err
+	var p [1]byte
+	n, err := r.Read(p[:])
+
+	if n > 0 {
+		// store the error if any :
+		r.err = err
+		// return the byte read from the reader
+		return p[0], nil
+	}
+
+	return 0, err
 }
 
 func (r *byteReader) Read(p []byte) (int, error) {
+	if r.err != nil {
+		err := r.err
+		r.err = nil
+		return 0, err
+	}
+
 	return r.r.Read(p)
 }
 
