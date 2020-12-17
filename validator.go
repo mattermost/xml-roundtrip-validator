@@ -38,7 +38,7 @@ func (err XMLValidationError) Unwrap() error {
 // Validate makes sure the given XML bytes survive round trips through encoding/xml without mutations
 func Validate(xmlReader io.Reader) error {
 	xmlBuffer := &bytes.Buffer{}
-	xmlReader = &byteReader{r: io.TeeReader(xmlReader, xmlBuffer)}
+	xmlReader = &byteReader{io.TeeReader(xmlReader, xmlBuffer)}
 	decoder := xml.NewDecoder(xmlReader)
 	decoder.Strict = false
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
@@ -117,18 +117,20 @@ func ValidateAll(xmlReader io.Reader) []error {
 
 // bufio implements a ByteReader but we explicitly don't want any buffering
 type byteReader struct {
-	r   io.Reader
-	err error
+	r io.Reader
 }
 
 func (r *byteReader) ReadByte() (byte, error) {
 	var p [1]byte
-	n, err := r.Read(p[:])
+	n, err := r.r.Read(p[:])
 
+	// the doc for the io.ReadeByte interface states :
+	//   If ReadByte returns an error, no input byte was consumed, and the returned byte value is undefined
+	// so : if a byte is actually extracted from the reader, and we want to return it, we mustn't return the error
 	if n > 0 {
-		// store the error if any :
-		r.err = err
-		// return the byte read from the reader
+		// this byteReader is only used in the context of the Validate() function,
+		// we deliberately choose to completely ignore the error in this case.
+		// return the byte extracted from the reader
 		return p[0], nil
 	}
 
@@ -136,12 +138,6 @@ func (r *byteReader) ReadByte() (byte, error) {
 }
 
 func (r *byteReader) Read(p []byte) (int, error) {
-	if r.err != nil {
-		err := r.err
-		r.err = nil
-		return 0, err
-	}
-
 	return r.r.Read(p)
 }
 

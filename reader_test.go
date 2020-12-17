@@ -18,8 +18,11 @@ func flateIt(t *testing.T, input string) io.Reader {
 	w, err := flate.NewWriter(&zipped, flate.DefaultCompression)
 	require.NoError(t, err)
 
-	w.Write([]byte(input))
-	w.Close()
+	_, err = w.Write([]byte(input))
+	require.NoError(t, err)
+
+	err = w.Close()
+	require.NoError(t, err)
 
 	return flate.NewReader(&zipped)
 }
@@ -30,5 +33,11 @@ func TestValidateZippedReader(t *testing.T) {
 
 	// Validate should not trigger an error on that Reader :
 	err := Validate(zipped)
-	assert.NoError(t, err)
+	assert.NoError(t, err, "Should not error on a valid XML document")
+
+	// an invalid document should still error :
+	zipped = flateIt(t, `<x::Root/>`)
+
+	err = Validate(zipped)
+	assert.Error(t, err, "Should error on an invalid XML document")
 }
