@@ -124,9 +124,9 @@ func (r *byteReader) ReadByte() (byte, error) {
 	var p [1]byte
 	n, err := r.r.Read(p[:])
 
-	// the doc for the io.ReadeByte interface states :
-	//   If ReadByte returns an error, no input byte was consumed, and the returned byte value is undefined
-	// so : if a byte is actually extracted from the reader, and we want to return it, we mustn't return the error
+	// The doc for the io.ByteReader interface states:
+	//   If ReadByte returns an error, no input byte was consumed, and the returned byte value is undefined.
+	// So if a byte is actually extracted from the reader, and we want to return it, we mustn't return the error.
 	if n > 0 {
 		// this byteReader is only used in the context of the Validate() function,
 		// we deliberately choose to completely ignore the error in this case.
