@@ -36,7 +36,7 @@ func TestValidateZippedReader(t *testing.T) {
 	assert.NoError(t, err, "Should not error on a valid XML document")
 
 	// an invalid document should still error :
-	zipped = flateIt(t, `<x::Root/>`)
+	zipped = flateIt(t, `<Root>]]></Root>`)
 
 	err = Validate(zipped)
 	assert.Error(t, err, "Should error on an invalid XML document")

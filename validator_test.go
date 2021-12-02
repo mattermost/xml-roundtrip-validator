@@ -37,6 +37,10 @@ func TestValidXML(t *testing.T) {
 func TestColonsInLocalNames(t *testing.T) {
 	var err error
 
+	if el := tokenize(t, `<x::Root/>`).(xml.StartElement); el.Name.Local == `x::Root` {
+		t.Skip("Name parsing fixed in stdlib, skipping test") // go1.17+
+	}
+
 	err = Validate(bytes.NewBufferString(`<x::Root/>`))
 	require.Error(t, err, "Should error on input with colons in the root element's name")
 	require.Equal(t, XMLRoundtripError{
@@ -69,6 +73,10 @@ func TestColonsInLocalNames(t *testing.T) {
 func TestEmptyNames(t *testing.T) {
 	var err error
 
+	if el := tokenize(t, `<x:>`).(xml.StartElement); el.Name.Local == `x:` {
+		t.Skip("Name parsing fixed in stdlib, skipping test") // go1.17+
+	}
+
 	err = Validate(bytes.NewBufferString(`<x:>`))
 	require.Error(t, err, "Should error on start element with no local name")
 
@@ -78,6 +86,10 @@ func TestEmptyNames(t *testing.T) {
 
 func TestEmptyAttributes(t *testing.T) {
 	var err error
+
+	if el := tokenize(t, `<Root :="value"/>`).(xml.StartElement); el.Attr[0].Name.Local == `:` {
+		t.Skip("Name parsing fixed in stdlib, skipping test") // go1.17+
+	}
 
 	err = Validate(bytes.NewBufferString(`<Root :="value"/>`))
 	require.Error(t, err, "Should error on input with empty attribute names")
@@ -106,6 +118,10 @@ func TestEmptyAttributes(t *testing.T) {
 
 func TestDirectives(t *testing.T) {
 	var err error
+
+	if dir := tokenize(t, `<! x<!-- -->y>`).(xml.Directive); string(dir) == ` x y` {
+		t.Skip("Directive parsing fixed in stdlib, skipping test") // go1.17+
+	}
 
 	err = Validate(bytes.NewBufferString(
 		`<Root>
@@ -148,14 +164,26 @@ func TestUnparseableXML(t *testing.T) {
 
 	errs := ValidateAll(bytes.NewBufferString(
 		`<Root ::attr="x">]]><x::Element/></Root>`))
-	require.Len(t, errs, 2, "Should return exactly two errors")
-	require.Error(t, errs[0], "Should error on bad attribute")
-	require.Error(t, errs[1], "Should error on unexpected ']]>' sequence")
-	require.IsType(t, &xml.SyntaxError{}, errs[1], "Error should be an &xml.SyntaxError")
+	if el := tokenize(t, `<Root :="value"/>`).(xml.StartElement); el.Attr[0].Name.Local == `:` {
+		// go1.17+
+		require.Len(t, errs, 1, "Should return exactly one error")
+		require.Error(t, errs[0], "Should error on unexpected ']]>' sequence")
+		require.IsType(t, &xml.SyntaxError{}, errs[0], "Error should be an &xml.SyntaxError")
+	} else {
+		// go1.16 and older
+		require.Len(t, errs, 2, "Should return exactly two errors")
+		require.Error(t, errs[0], "Should error on bad attribute")
+		require.Error(t, errs[1], "Should error on unexpected ']]>' sequence")
+		require.IsType(t, &xml.SyntaxError{}, errs[1], "Error should be an &xml.SyntaxError")
+	}
 }
 
 func TestValidateAll(t *testing.T) {
 	var err XMLValidationError
+
+	if el := tokenize(t, `<x::Root/>`).(xml.StartElement); el.Name.Local == `x::Root` {
+		t.Skip("Name parsing fixed in stdlib, skipping test") // go1.17+
+	}
 
 	xmlBytes := []byte("<Root>\r\n    <! <<!-- -->!-- x --> y>\r\n    <Element ::attr=\"foo\"></x::Element>\r\n</Root>")
 	errs := ValidateAll(bytes.NewBuffer(xmlBytes))
