@@ -118,17 +118,17 @@ func TestValidateAll(t *testing.T) {
 	errs := ValidateAll(bytes.NewBuffer(xmlBytes))
 	require.Equal(t, 3, len(errs), "Should return three errors")
 
-	err = errs[0].(XMLValidationError)
+	errors.As(errs[0], &err)
 	require.Equal(t, int64(2), err.Line, "First error should be on line 2")
 	require.Equal(t, int64(5), err.Column, "First error should be on column 5")
 	require.Equal(t, []byte(`<! <<!-- -->!-- x --> y>`), xmlBytes[err.Start:err.End], "First error should point to the correct bytes in the original XML")
 
-	err = errs[1].(XMLValidationError)
+	errors.As(errs[1], &err)
 	require.Equal(t, int64(3), err.Line, "Second error should be on line 3")
 	require.Equal(t, int64(5), err.Column, "Second error should be on column 5")
 	require.Equal(t, []byte(`<Element ::attr="foo">`), xmlBytes[err.Start:err.End], "Second error should point to the correct bytes in the original XML")
 
-	err = errs[2].(XMLValidationError)
+	errors.As(errs[2], &err)
 	require.Equal(t, int64(3), err.Line, "Third error should be on line 3")
 	require.Equal(t, int64(27), err.Column, "Third error should be on column 27")
 	require.Equal(t, []byte(`</x::Element>`), xmlBytes[err.Start:err.End], "Third error should point to the correct bytes in the original XML")
