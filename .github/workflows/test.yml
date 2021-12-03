@@ -1,0 +1,25 @@
+name: test
+
+on:
+  push:
+    branches: [ 'master' ]
+  pull_request:
+
+permissions: read-all
+
+jobs:
+  tests:
+    name: Run tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go: [ '1.16.x', '1.17,x' ]
+
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-go@v2
+        with:
+          go-version: ${{ matrix.go }}
+
+      - name: Run Go tests
+        run: go test ./...

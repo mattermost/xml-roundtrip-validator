@@ -45,7 +45,7 @@ func Validate(xmlReader io.Reader) error {
 	offset := int64(0)
 	for {
 		token, err := decoder.RawToken()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			return nil
 		} else if err != nil {
 			return err
@@ -147,7 +147,7 @@ func CheckToken(before xml.Token) error {
 	buffer := &bytes.Buffer{}
 	encoder := xml.NewEncoder(buffer)
 
-	switch t := before.(type) {
+	switch t := before.(type) { // nolint:gocritic
 	case xml.EndElement:
 		// xml.Encoder expects matching StartElements for all EndElements
 		if err := encoder.EncodeToken(xml.StartElement{Name: t.Name}); err != nil {
@@ -165,9 +165,8 @@ func CheckToken(before xml.Token) error {
 	decoder := xml.NewDecoder(bytes.NewReader(encoded))
 	decoder.CharsetReader = func(charset string, input io.Reader) (io.Reader, error) { return input, nil }
 
-	switch before.(type) {
+	switch before.(type) { // nolint:gocritic
 	case xml.EndElement:
-		// throw away the StartElement we added above
 		if _, err := decoder.RawToken(); err != nil {
 			return err
 		}
@@ -191,7 +190,6 @@ func CheckToken(before xml.Token) error {
 
 func tokenEquals(before, after xml.Token) bool {
 	switch t1 := before.(type) {
-
 	case xml.CharData:
 		t2, ok := after.(xml.CharData)
 		if !ok {
@@ -258,7 +256,6 @@ func fixNamespacePrefixes(before, after *xml.StartElement) {
 	// if the after token has more attributes than the before token,
 	// the round trip likely introduced new xmlns attributes
 	if len(after.Attr) > len(before.Attr) {
-
 		// handle erased tag prefixes; the corresponding xmlns attribute is always the first one
 		if (before.Name.Space != "" && after.Name.Space == "" && after.Attr[0].Name == xml.Name{Local: "xmlns"}) {
 			after.Name.Space = after.Attr[0].Value
