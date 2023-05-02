@@ -35,13 +35,12 @@ func main() {
 			fmt.Fprintf(os.Stderr, "%v\n", err)
 		}
 		os.Exit(1)
-	} else {
-		err := validator.Validate(f)
-		if err == nil {
-			fmt.Println("Document validated without errors")
-			os.Exit(0)
-		}
-		fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
 	}
+	err := validator.Validate(f)
+	if err == nil {
+		fmt.Println("Document validated without errors")
+		os.Exit(0)
+	}
+	fmt.Fprintf(os.Stderr, "%v\n", err)
+	os.Exit(1)
 }
