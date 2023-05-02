@@ -1,5 +1,5 @@
-//go:build go1.17 && !go1.20
-// +build go1.17,!go1.20
+//go:build go1.20
+// +build go1.20
 
 package validator
 
@@ -10,26 +10,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 )
-
-func TestColonsInLocalNames(t *testing.T) {
-	var err error
-
-	el := tokenize(t, `<x::Root/>`).(xml.StartElement)
-	require.Equal(t, `x::Root`, el.Name.Local,
-		"encoding/xml should tokenize double colons as part of the local name")
-
-	err = Validate(bytes.NewBufferString(`<x::Root/>`))
-	require.NoError(t, err, "Should not error on input with colons in the root element's name")
-
-	err = Validate(bytes.NewBufferString(`<Root><x::Element></::Element></Root>`))
-	require.NoError(t, err, "Should error on input with colons in a nested tag's name")
-
-	err = Validate(bytes.NewBufferString(`<Root><Element ::attr="foo"></Element></Root>`))
-	require.NoError(t, err, "Should error on input with colons in an attribute's name")
-
-	err = Validate(bytes.NewBufferString(`<Root></x::Element></Root>`))
-	require.NoError(t, err, "Should error on input with colons in an end tag's name")
-}
 
 func TestEmptyNames(t *testing.T) {
 	var err error
@@ -92,11 +72,7 @@ func TestDirectives(t *testing.T) {
 }
 
 func TestValidateAll(t *testing.T) {
-	el := tokenize(t, `<x::Root/>`).(xml.StartElement)
-	require.Equal(t, `x::Root`, el.Name.Local,
-		"encoding/xml should tokenize double colons as part of the local name")
-
-	xmlBytes := []byte("<Root>\r\n    <! <<!-- -->!-- x --> y>\r\n    <Element ::attr=\"foo\"></x::Element>\r\n</Root>")
+	xmlBytes := []byte("<Root>\r\n    <! <<!-- -->!-- x --> y>\r\n    <Element :attr=\"foo\"></x:Element>\r\n</Root>")
 	errs := ValidateAll(bytes.NewBuffer(xmlBytes))
 	require.Equal(t, 0, len(errs), "Should return zero errors")
 }
