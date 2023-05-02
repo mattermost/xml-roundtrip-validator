@@ -36,7 +36,7 @@ func main() {
 		}
 		os.Exit(1)
 	}
-	err := validator.Validate(f)
+	err = validator.Validate(f)
 	if err == nil {
 		fmt.Println("Document validated without errors")
 		os.Exit(0)
